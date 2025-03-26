@@ -102,6 +102,6 @@ async function loadInterviews() {
   const table = document.getElementById("interview-table").getElementsByTagName("tbody")[0];
   table.innerHTML = "";
   interviews.forEach((i) => {
-    table.innerHTML += `<tr><td>${i.candidateName}</td><td>${i.candidateEmail}</td><td>${i.jobId}</td><td>${i.slotId}</td><td>${i.time}</td></tr>`;
+    table.innerHTML += `<tr><td>${i.candidateName}</td><td>${i.candidateEmail}</td><td>${i.slotId}</td><td>${i.time}</td></tr>`;
   });
 }

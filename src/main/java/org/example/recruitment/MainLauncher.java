@@ -24,7 +24,7 @@ public class MainLauncher {
                 .addService(new ServiceRegistryImpl())
                 .build()
                 .start();
-        System.out.println("✅ Service Registry started on port 9000");
+        System.out.println("Service Registry started on port 9000");
         servers.add(registryServer);
 
         // Prepare stub to register others
@@ -37,7 +37,7 @@ public class MainLauncher {
                 .addService(new JobServiceImpl(registryStub))
                 .build()
                 .start();
-        System.out.println("✅ Job Service started on port 9001");
+        System.out.println("Job Service started on port 9001");
         registryStub.register(ServiceRegistryOuterClass.ServiceInfo.newBuilder()
                 .setName("JobService").setHost("localhost").setPort(9001).build());
         servers.add(jobServer);
@@ -47,7 +47,7 @@ public class MainLauncher {
                 .addService(new CandidateScreeningServiceImpl())
                 .build()
                 .start();
-        System.out.println("✅ Screening Service started on port 9002");
+        System.out.println("Screening Service started on port 9002");
         registryStub.register(ServiceRegistryOuterClass.ServiceInfo.newBuilder()
                 .setName("CandidateScreeningService").setHost("localhost").setPort(9002).build());
         servers.add(screeningServer);
@@ -57,13 +57,13 @@ public class MainLauncher {
                 .addService(new InterviewServiceImpl())
                 .build()
                 .start();
-        System.out.println("✅ Interview Service started on port 9003");
+        System.out.println("Interview Service started on port 9003");
         registryStub.register(ServiceRegistryOuterClass.ServiceInfo.newBuilder()
                 .setName("InterviewService").setHost("localhost").setPort(9003).build());
         servers.add(interviewServer);
 
         // 5. Start Web Gateway
-        System.out.println("🌐 Starting Web Gateway on http://localhost:8080");
+        System.out.println("Starting Web Gateway on http://localhost:8080");
         WebGateway.main(new String[0]);
 
         // Add shutdown hook
