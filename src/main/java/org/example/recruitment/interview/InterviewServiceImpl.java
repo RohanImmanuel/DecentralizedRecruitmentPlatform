@@ -2,13 +2,8 @@ package org.example.recruitment.interview;
 
 import interview.InterviewServiceGrpc;
 import interview.InterviewServiceOuterClass.*;
-
 import com.google.protobuf.Empty;
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
-import registry.ServiceRegistryGrpc;
-import registry.ServiceRegistryOuterClass;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -16,89 +11,120 @@ import java.util.*;
 
 public class InterviewServiceImpl extends InterviewServiceGrpc.InterviewServiceImplBase {
 
-    private final List<Slot> slots = new ArrayList<>();
+    private final List<Slot> availableSlots = new ArrayList<>();
     private final List<ScheduledInterview> scheduledInterviews = new ArrayList<>();
 
     public InterviewServiceImpl() {
-        generateSlots();
+        generateSlotsForTomorrow();
     }
 
-    private void generateSlots() {
-        LocalDateTime tomorrow = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0);
+    private void generateSlotsForTomorrow() {
+        LocalDateTime base = LocalDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         for (int i = 0; i < 10; i++) {
-            slots.add(Slot.newBuilder()
-                    .setSlotId(UUID.randomUUID().toString())
-                    .setTime(tomorrow.plusMinutes(i * 30).format(formatter))
+            String time = base.plusMinutes(i * 30).format(formatter);
+            Slot slot = Slot.newBuilder()
+                    .setSlotId("SLOT_" + i)
+                    .setTime(time)
                     .setBooked(false)
-                    .build());
+                    .build();
+            availableSlots.add(slot);
         }
     }
 
     @Override
     public void listAvailableSlots(Empty request, StreamObserver<SlotList> responseObserver) {
-        responseObserver.onNext(SlotList.newBuilder().addAllSlots(slots).build());
+        SlotList.Builder listBuilder = SlotList.newBuilder();
+        listBuilder.addAllSlots(availableSlots);
+        responseObserver.onNext(listBuilder.build());
         responseObserver.onCompleted();
     }
 
     @Override
     public void scheduleInterview(InterviewRequest request, StreamObserver<InterviewResponse> responseObserver) {
-        Optional<Slot> slotOpt = slots.stream()
+        Optional<Slot> optionalSlot = availableSlots.stream()
                 .filter(s -> s.getSlotId().equals(request.getSlotId()) && !s.getBooked())
                 .findFirst();
 
-        if (slotOpt.isEmpty()) {
+        if (optionalSlot.isEmpty()) {
             responseObserver.onNext(InterviewResponse.newBuilder()
                     .setSuccess(false)
-                    .setMessage("Slot not available")
+                    .setMessage("Slot unavailable or already booked")
                     .build());
-            responseObserver.onCompleted();
-            return;
+        } else {
+            Slot original = optionalSlot.get();
+            Slot updated = original.toBuilder().setBooked(true).build();
+            availableSlots.set(availableSlots.indexOf(original), updated);
+
+            ScheduledInterview interview = ScheduledInterview.newBuilder()
+                    .setCandidateName(request.getCandidateName())
+                    .setCandidateEmail(request.getCandidateEmail())
+                    .setJobId(request.getJobId())
+                    .setSlotId(request.getSlotId())
+                    .setTime(original.getTime())
+                    .build();
+            scheduledInterviews.add(interview);
+
+            responseObserver.onNext(InterviewResponse.newBuilder()
+                    .setSuccess(true)
+                    .setMessage("Interview scheduled at " + original.getTime())
+                    .build());
         }
-
-        Slot original = slotOpt.get();
-        Slot updated = Slot.newBuilder(original).setBooked(true).build();
-        slots.set(slots.indexOf(original), updated);
-
-        scheduledInterviews.add(ScheduledInterview.newBuilder()
-                .setCandidateName(request.getCandidateName())
-                .setCandidateEmail(request.getCandidateEmail())
-                .setJobId(request.getJobId())
-                .setSlotId(request.getSlotId())
-                .setTime(original.getTime())
-                .build());
-
-        responseObserver.onNext(InterviewResponse.newBuilder()
-                .setSuccess(true)
-                .setMessage("Interview scheduled successfully")
-                .build());
         responseObserver.onCompleted();
     }
 
     @Override
     public void listScheduledInterviews(Empty request, StreamObserver<ScheduledInterviewList> responseObserver) {
-        responseObserver.onNext(ScheduledInterviewList.newBuilder()
-                .addAllInterviews(scheduledInterviews)
-                .build());
+        ScheduledInterviewList.Builder listBuilder = ScheduledInterviewList.newBuilder();
+        listBuilder.addAllInterviews(scheduledInterviews);
+        responseObserver.onNext(listBuilder.build());
         responseObserver.onCompleted();
     }
 
-    public static void main(String[] args) throws Exception {
-        Server server = ServerBuilder.forPort(9003)
-                .addService(new InterviewServiceImpl())
-                .build()
-                .start();
+    @Override
+    public StreamObserver<InterviewRequest> scheduleInterviewStream(StreamObserver<InterviewResponse> responseObserver) {
+        return new StreamObserver<>() {
+            @Override
+            public void onNext(InterviewRequest request) {
+                Optional<Slot> optionalSlot = availableSlots.stream()
+                        .filter(s -> s.getSlotId().equals(request.getSlotId()) && !s.getBooked())
+                        .findFirst();
 
-        System.out.println("Interview Scheduling Service running on port 9003");
+                if (optionalSlot.isEmpty()) {
+                    responseObserver.onNext(InterviewResponse.newBuilder()
+                            .setSuccess(false)
+                            .setMessage("Slot unavailable or already booked")
+                            .build());
+                } else {
+                    Slot original = optionalSlot.get();
+                    Slot updated = original.toBuilder().setBooked(true).build();
+                    availableSlots.set(availableSlots.indexOf(original), updated);
 
-        var regChannel = io.grpc.ManagedChannelBuilder.forAddress("localhost", 9000).usePlaintext().build();
-        var stub = ServiceRegistryGrpc.newBlockingStub(regChannel);
-        stub.register(ServiceRegistryOuterClass.ServiceInfo.newBuilder()
-                .setName("InterviewService")
-                .setHost("localhost")
-                .setPort(9003)
-                .build());
+                    ScheduledInterview interview = ScheduledInterview.newBuilder()
+                            .setCandidateName(request.getCandidateName())
+                            .setCandidateEmail(request.getCandidateEmail())
+                            .setJobId(request.getJobId())
+                            .setSlotId(request.getSlotId())
+                            .setTime(original.getTime())
+                            .build();
+                    scheduledInterviews.add(interview);
 
-        server.awaitTermination();
+                    responseObserver.onNext(InterviewResponse.newBuilder()
+                            .setSuccess(true)
+                            .setMessage("Interview scheduled at " + original.getTime())
+                            .build());
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                System.err.println("Bidirectional stream error: " + t.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                responseObserver.onCompleted();
+            }
+        };
     }
 }

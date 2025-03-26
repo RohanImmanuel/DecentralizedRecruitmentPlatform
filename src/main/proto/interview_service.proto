@@ -8,6 +8,7 @@ service InterviewService {
   rpc ScheduleInterview(InterviewRequest) returns (InterviewResponse);
   rpc ListAvailableSlots(google.protobuf.Empty) returns (SlotList);
   rpc ListScheduledInterviews(google.protobuf.Empty) returns (ScheduledInterviewList);
+  rpc ScheduleInterviewStream(stream InterviewRequest) returns (stream InterviewResponse);
 }
 
 message InterviewRequest {

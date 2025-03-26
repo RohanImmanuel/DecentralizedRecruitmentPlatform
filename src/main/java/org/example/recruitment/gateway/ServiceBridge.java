@@ -3,6 +3,7 @@ package org.example.recruitment.gateway;
 import com.google.protobuf.Empty;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
 import io.javalin.Javalin;
 
 import job.JobServiceGrpc;
@@ -11,6 +12,8 @@ import screening.CandidateScreeningServiceGrpc;
 import screening.CandidateScreeningServiceOuterClass;
 import interview.InterviewServiceGrpc;
 import interview.InterviewServiceOuterClass;
+import registry.ServiceRegistryGrpc;
+import registry.ServiceRegistryOuterClass;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,6 +21,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ServiceBridge {
+
+    private static ServiceRegistryGrpc.ServiceRegistryBlockingStub registryStub;
 
     public static class JobCreateRequest {
         public String title;
@@ -40,24 +45,23 @@ public class ServiceBridge {
     }
 
     public static void registerRoutes(Javalin app) {
+        var registryChannel = ManagedChannelBuilder.forAddress("localhost", 9000).usePlaintext().build();
+        registryStub = ServiceRegistryGrpc.newBlockingStub(registryChannel);
+
+        // REST endpoints
         app.post("/jobs", ctx -> {
             var req = ctx.bodyAsClass(JobCreateRequest.class);
-            var channel = ManagedChannelBuilder.forAddress("localhost", 9001).usePlaintext().build();
-            var stub = JobServiceGrpc.newBlockingStub(channel);
-
+            var stub = JobServiceGrpc.newBlockingStub(getChannel("JobService"));
             var response = stub.createJob(JobServiceOuterClass.Job.newBuilder()
                     .setTitle(req.title)
                     .setCompany(req.company)
                     .setDescription(req.description)
                     .build());
-
             ctx.json(Map.of("success", response.getSuccess(), "jobId", response.getJobId()));
-            channel.shutdown();
         });
 
         app.get("/jobs", ctx -> {
-            var channel = ManagedChannelBuilder.forAddress("localhost", 9001).usePlaintext().build();
-            var stub = JobServiceGrpc.newBlockingStub(channel);
+            var stub = JobServiceGrpc.newBlockingStub(getChannel("JobService"));
             var jobs = stub.listJobs(Empty.getDefaultInstance());
             List<Map<String, Object>> jobList = jobs.getJobsList().stream().map(job -> {
                 Map<String, Object> map = new HashMap<>();
@@ -68,46 +72,35 @@ public class ServiceBridge {
                 return map;
             }).collect(Collectors.toList());
             ctx.json(jobList);
-            channel.shutdown();
         });
 
         app.post("/apply", ctx -> {
             var req = ctx.bodyAsClass(ApplicationRequestDTO.class);
-            var channel = ManagedChannelBuilder.forAddress("localhost", 9001).usePlaintext().build();
-            var stub = JobServiceGrpc.newBlockingStub(channel);
-
+            var stub = JobServiceGrpc.newBlockingStub(getChannel("JobService"));
             var resp = stub.applyForJob(JobServiceOuterClass.ApplicationRequest.newBuilder()
                     .setJobId(req.jobId)
                     .setCandidateName(req.candidateName)
                     .setCandidateEmail(req.candidateEmail)
                     .setResumeText(req.resumeText)
                     .build());
-
             ctx.json(Map.of("success", resp.getSuccess(), "message", resp.getMessage()));
-            channel.shutdown();
         });
 
         app.get("/screening", ctx -> {
             String email = ctx.queryParam("email");
-            var channel = ManagedChannelBuilder.forAddress("localhost", 9002).usePlaintext().build();
-            var stub = CandidateScreeningServiceGrpc.newBlockingStub(channel);
-
+            var stub = CandidateScreeningServiceGrpc.newBlockingStub(getChannel("CandidateScreeningService"));
             var result = stub.getScreeningResult(CandidateScreeningServiceOuterClass.ScreeningQuery.newBuilder()
                     .setCandidateEmail(email)
                     .build());
-
             Map<String, Object> map = new HashMap<>();
             map.put("email", result.getCandidateEmail());
             map.put("score", result.getScore());
             map.put("feedback", result.getFeedback());
-
             ctx.json(map);
-            channel.shutdown();
         });
 
         app.get("/slots", ctx -> {
-            var channel = ManagedChannelBuilder.forAddress("localhost", 9003).usePlaintext().build();
-            var stub = InterviewServiceGrpc.newBlockingStub(channel);
+            var stub = InterviewServiceGrpc.newBlockingStub(getChannel("InterviewService"));
             var slots = stub.listAvailableSlots(Empty.getDefaultInstance());
             List<Map<String, Object>> slotList = slots.getSlotsList().stream().map(slot -> {
                 Map<String, Object> map = new HashMap<>();
@@ -117,28 +110,22 @@ public class ServiceBridge {
                 return map;
             }).collect(Collectors.toList());
             ctx.json(slotList);
-            channel.shutdown();
         });
 
         app.post("/schedule", ctx -> {
             var req = ctx.bodyAsClass(ScheduleRequestDTO.class);
-            var channel = ManagedChannelBuilder.forAddress("localhost", 9003).usePlaintext().build();
-            var stub = InterviewServiceGrpc.newBlockingStub(channel);
-
+            var stub = InterviewServiceGrpc.newBlockingStub(getChannel("InterviewService"));
             var result = stub.scheduleInterview(InterviewServiceOuterClass.InterviewRequest.newBuilder()
                     .setCandidateName(req.candidateName)
                     .setCandidateEmail(req.candidateEmail)
                     .setJobId(req.jobId)
                     .setSlotId(req.slotId)
                     .build());
-
             ctx.json(Map.of("success", result.getSuccess(), "message", result.getMessage()));
-            channel.shutdown();
         });
 
         app.get("/applications", ctx -> {
-            var channel = ManagedChannelBuilder.forAddress("localhost", 9001).usePlaintext().build();
-            var stub = JobServiceGrpc.newBlockingStub(channel);
+            var stub = JobServiceGrpc.newBlockingStub(getChannel("JobService"));
             var apps = stub.listApplications(Empty.getDefaultInstance());
             List<Map<String, Object>> list = apps.getApplicationsList().stream().map(a -> {
                 Map<String, Object> map = new HashMap<>();
@@ -150,12 +137,10 @@ public class ServiceBridge {
                 return map;
             }).collect(Collectors.toList());
             ctx.json(list);
-            channel.shutdown();
         });
 
         app.get("/interviews", ctx -> {
-            var channel = ManagedChannelBuilder.forAddress("localhost", 9003).usePlaintext().build();
-            var stub = InterviewServiceGrpc.newBlockingStub(channel);
+            var stub = InterviewServiceGrpc.newBlockingStub(getChannel("InterviewService"));
             var interviews = stub.listScheduledInterviews(Empty.getDefaultInstance());
             List<Map<String, Object>> list = interviews.getInterviewsList().stream().map(i -> {
                 Map<String, Object> map = new HashMap<>();
@@ -167,7 +152,108 @@ public class ServiceBridge {
                 return map;
             }).collect(Collectors.toList());
             ctx.json(list);
-            channel.shutdown();
         });
+
+        // WebSocket: Resume Submission (Client Streaming)
+        app.ws("/ws/screening/submit", ws -> {
+            ws.onConnect(ctx -> {
+                var stub = CandidateScreeningServiceGrpc.newStub(getChannel("CandidateScreeningService"));
+                StreamObserver<CandidateScreeningServiceOuterClass.ResumeRequest> reqStream = stub.submitResume(
+                        new StreamObserver<CandidateScreeningServiceOuterClass.ScreeningResult>() {
+                            public void onNext(CandidateScreeningServiceOuterClass.ScreeningResult value) {
+                                if (ctx.session.isOpen()) {
+                                    ctx.send("SCORE: " + value.getScore() + ", FEEDBACK: " + value.getFeedback());
+                                }
+                            }
+                            public void onError(Throwable t) {
+                                if (ctx.session.isOpen()) {
+                                    ctx.send("ERROR: " + t.getMessage());
+                                }
+                            }
+                            public void onCompleted() {
+                                if (ctx.session.isOpen()) {
+                                    ctx.send("DONE");
+                                }
+                            }
+                        }
+                );
+                ctx.attribute("stream", reqStream);
+            });
+
+            ws.onMessage(ctx -> {
+                var stream = ctx.attribute("stream");
+                if (stream != null) {
+                    ((StreamObserver<CandidateScreeningServiceOuterClass.ResumeRequest>) stream).onNext(
+                            CandidateScreeningServiceOuterClass.ResumeRequest.newBuilder()
+                                    .setCandidateEmail("stream@user.com")
+                                    .setContentChunk(ctx.message())
+                                    .build()
+                    );
+                }
+            });
+
+            ws.onClose(ctx -> {
+                var stream = ctx.attribute("stream");
+                if (stream != null) ((StreamObserver<?>) stream).onCompleted();
+            });
+        });
+
+        // WebSocket: Interview Scheduling (Bidirectional Streaming)
+        app.ws("/ws/interviews/schedule", ws -> {
+            ws.onConnect(ctx -> {
+                var stub = InterviewServiceGrpc.newStub(getChannel("InterviewService"));
+                StreamObserver<InterviewServiceOuterClass.InterviewRequest> reqStream =
+                        stub.scheduleInterviewStream(new StreamObserver<InterviewServiceOuterClass.InterviewResponse>() {
+                            @Override
+                            public void onNext(InterviewServiceOuterClass.InterviewResponse response) {
+                                if (ctx.session.isOpen()) {
+                                    ctx.send("CONFIRM: " + response.getMessage());
+                                }
+                            }
+
+                            @Override
+                            public void onError(Throwable t) {
+                                if (ctx.session.isOpen()) {
+                                    ctx.send("ERROR: " + t.getMessage());
+                                }
+                            }
+
+                            @Override
+                            public void onCompleted() {
+                                if (ctx.session.isOpen()) {
+                                    ctx.send("DONE");
+                                }
+                            }
+                        });
+                ctx.attribute("stream", reqStream);
+            });
+
+            ws.onMessage(ctx -> {
+                var stream = ctx.attribute("stream");
+                if (stream != null) {
+                    String[] parts = ctx.message().split(",");
+                    ((StreamObserver<InterviewServiceOuterClass.InterviewRequest>) stream).onNext(
+                            InterviewServiceOuterClass.InterviewRequest.newBuilder()
+                                    .setCandidateName(parts[0])
+                                    .setCandidateEmail(parts[1])
+                                    .setJobId(Integer.parseInt(parts[2]))
+                                    .setSlotId(parts[3])
+                                    .build()
+                    );
+                }
+            });
+
+            ws.onClose(ctx -> {
+                var stream = ctx.attribute("stream");
+                if (stream != null) ((StreamObserver<?>) stream).onCompleted();
+            });
+        });
+    }
+
+    private static ManagedChannel getChannel(String serviceName) {
+        var info = registryStub.discover(ServiceRegistryOuterClass.ServiceQuery.newBuilder()
+                .setName(serviceName)
+                .build());
+        return ManagedChannelBuilder.forAddress(info.getHost(), info.getPort()).usePlaintext().build();
     }
 }
