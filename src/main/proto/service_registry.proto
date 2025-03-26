@@ -1,0 +1,20 @@
+syntax = "proto3";
+package registry;
+
+service ServiceRegistry {
+    rpc Register(ServiceInfo) returns (RegisterResponse);
+    rpc Discover(ServiceQuery) returns (ServiceInfo);
+}
+
+message ServiceInfo {
+    string name = 1;
+    string host = 2;
+    int32 port = 3;
+}
+message ServiceQuery {
+    string name = 1;
+}
+message RegisterResponse {
+    bool success = 1;
+    string message = 2;
+}

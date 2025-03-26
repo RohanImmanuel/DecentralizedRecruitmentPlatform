@@ -1,0 +1,39 @@
+syntax = "proto3";
+package interview;
+
+import "google/protobuf/empty.proto";
+
+service InterviewService {
+    rpc ScheduleInterview(InterviewRequest) returns (InterviewConfirmation);
+    rpc ListAvailableSlots(google.protobuf.Empty) returns (SlotList);
+    rpc ScheduleUpdates(stream ScheduleRequest) returns (stream ScheduleUpdate);
+}
+
+message Slot {
+    string slotId = 1;
+    string time = 2;
+    bool booked = 3;
+}
+message SlotList {
+    repeated Slot slots = 1;
+}
+message InterviewRequest {
+    string candidateEmail = 1;
+    string candidateName = 2;
+    int32 jobId = 3;
+    string slotId = 4;
+}
+message InterviewConfirmation {
+    bool success = 1;
+    string message = 2;
+}
+message ScheduleRequest {
+    string candidateEmail = 1;
+    string candidateName = 2;
+    string slotId = 3;
+    bool subscribe = 4;
+}
+message ScheduleUpdate {
+    string message = 1;
+    repeated Slot slots = 2;
+}

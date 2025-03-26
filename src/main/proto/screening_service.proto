@@ -1,0 +1,25 @@
+syntax = "proto3";
+package screening;
+
+option java_package = "screening";
+option java_outer_classname = "CandidateScreeningServiceOuterClass";
+
+service CandidateScreeningService {
+    rpc SubmitResume(stream ResumeRequest) returns (ScreeningResult);
+    rpc GetScreeningResult(ScreeningQuery) returns (ScreeningResult);
+}
+
+message ResumeRequest {
+    string candidateEmail = 1;
+    string contentChunk = 2;
+}
+
+message ScreeningQuery {
+    string candidateEmail = 1;
+}
+
+message ScreeningResult {
+    string candidateEmail = 1;
+    int32 score = 2;
+    string feedback = 3;
+}
