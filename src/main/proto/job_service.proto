@@ -1,35 +1,53 @@
 syntax = "proto3";
+
 package job;
 
 import "google/protobuf/empty.proto";
 
 service JobService {
-    rpc CreateJob(Job) returns (JobResponse);
-    rpc ListJobs(google.protobuf.Empty) returns (JobList);
-    rpc ApplyForJob(ApplicationRequest) returns (ApplicationResponse);
+  rpc CreateJob(Job) returns (JobResponse);
+  rpc ListJobs(google.protobuf.Empty) returns (JobList);
+  rpc ApplyForJob(ApplicationRequest) returns (ApplicationResponse);
+  rpc ListApplications(google.protobuf.Empty) returns (ApplicationList);
 }
 
 message Job {
-    int32 id = 1;
-    string title = 2;
-    string description = 3;
-    string company = 4;
+  int32 id = 1;
+  string title = 2;
+  string description = 3;
+  string company = 4;
 }
+
 message JobList {
-    repeated Job jobs = 1;
+  repeated Job jobs = 1;
 }
+
 message JobResponse {
-    bool success = 1;
-    string message = 2;
-    int32 jobId = 3;
+  bool success = 1;
+  string message = 2;
+  int32 jobId = 3;
 }
+
 message ApplicationRequest {
-    int32 jobId = 1;
-    string candidateName = 2;
-    string candidateEmail = 3;
-    string resumeText = 4;
+  int32 jobId = 1;
+  string candidateName = 2;
+  string candidateEmail = 3;
+  string resumeText = 4;
 }
+
 message ApplicationResponse {
-    bool success = 1;
-    string message = 2;
+  bool success = 1;
+  string message = 2;
+}
+
+message Application {
+  string candidateName = 1;
+  string candidateEmail = 2;
+  int32 jobId = 3;
+  int32 screeningScore = 4;
+  string screeningFeedback = 5;
+}
+
+message ApplicationList {
+  repeated Application applications = 1;
 }

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+    Recruitment Dashboard
+  </title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="css/style.css" rel="stylesheet">
+  </link>
+</head>
+<body>
+<header class="mb-4 text-center">
+  <h1 class="display-5">
+    Decentralized Recruitment Dashboard
+  </h1>
+</header>
+<main class="container">
+  <div class="row g-4 mb-4">
+    <div class="col-lg-4">
+      <div class="card p-3 shadow-sm">
+        <h5>
+          Post a Job
+        </h5>
+        <input class="form-control mb-2" id="job-title" placeholder="Job Title"/>
+        <input class="form-control mb-2" id="job-company" placeholder="Company"/>
+        <textarea class="form-control mb-2" id="job-desc" placeholder="Job Description"></textarea>
+        <button class="btn btn-primary" onclick="createJob()">
+          Create Job
+        </button>
+        <div class="mt-2 text-success small" id="job-message">
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card p-3 shadow-sm">
+        <h5>
+          Available Jobs
+        </h5>
+        <table class="table table-striped mt-2" id="job-table">
+        </table>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card p-3 shadow-sm">
+        <h5>
+          Apply to a Job
+        </h5>
+        <select class="form-select mb-2" id="job-select">
+        </select>
+        <input class="form-control mb-2" id="cand-name" placeholder="Your Name"/>
+        <input class="form-control mb-2" id="cand-email" placeholder="Your Email"/>
+        <textarea class="form-control mb-2" id="resume" placeholder="Paste your resume..."></textarea>
+        <button class="btn btn-success" onclick="apply()">
+          Apply
+        </button>
+        <div class="mt-2 text-success small" id="apply-message">
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card p-3 shadow-sm">
+        <h5>
+          Candidate Applications
+        </h5>
+        <table class="table table-hover" id="applications-table">
+          <thead>
+          <tr>
+            <th>
+              Name
+            </th>
+            <th>
+              Email
+            </th>
+            <th>
+              Job ID
+            </th>
+            <th>
+              Score
+            </th>
+            <th>
+              Feedback
+            </th>
+          </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card p-3 shadow-sm">
+        <h5>
+          Schedule Interview
+        </h5>
+        <select class="form-select mb-2" id="slot-select">
+        </select>
+        <input class="form-control mb-2" id="slot-name" placeholder="Candidate Name"/>
+        <input class="form-control mb-2" id="slot-email" placeholder="Candidate Email"/>
+        <button class="btn btn-warning" onclick="schedule()">
+          Schedule
+        </button>
+        <div class="mt-2 text-success small" id="schedule-message">
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card p-3 shadow-sm">
+        <h5>
+          Scheduled Interviews
+        </h5>
+        <table class="table table-hover" id="interview-table">
+          <thead>
+          <tr>
+            <th>
+              Name
+            </th>
+            <th>
+              Email
+            </th>
+            <th>
+              Job ID
+            </th>
+            <th>
+              Slot ID
+            </th>
+            <th>
+              Time
+            </th>
+          </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+<script src="js/script.js">
+</script>
+</body>
+</html>
